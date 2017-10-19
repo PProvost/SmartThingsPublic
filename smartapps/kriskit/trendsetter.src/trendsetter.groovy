@@ -14,7 +14,7 @@
  *
  */
 definition(
-    name: "Trend Setter",
+    name: "Trendsetter",
     namespace: "kriskit",
     author: "Chris Kitch",
     description: "Uses virtual child devices to group other devices together and perform commands and aggregate data from the group.",
