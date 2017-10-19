@@ -1,5 +1,5 @@
 /**
- *  Trend Setter - Dimmer Group Device
+ *  Trend Setter - Colorful Light Group Device
  *
  *  Copyright 2015 Chris Kitch
  *
@@ -14,16 +14,22 @@
  *
  */
 metadata {
-	definition (name: "Dimmer Group Device", namespace: "kriskit.trendSetter", author: "Chris Kitch") {
+	definition (name: "Colorful Light Group Device", namespace: "kriskit.trendsetter", author: "Chris Kitch") {
 		capability "Actuator"
 		capability "Sensor"
 		capability "Switch"
 		capability "Switch Level"
+        capability "Color Control"
         
         command "adjustLevel"
+        command "adjustSaturation"
+        command "adjustHue"
         
         attribute "onPercentage", "number"
         attribute "levelSync", "string"
+        attribute "colorSync", "string"
+        attribute "saturationSync", "string"
+        attribute "hueSync", "string"
 	}
 
 	simulator {
@@ -42,6 +48,10 @@ metadata {
                 attributeState "mostlyOff", label: 'Offish', action: "switch.off", icon: "st.lights.multi-light-bulb-off", backgroundColor: "#d1e5b5", nextState: "turninOff"
 			}
             
+            tileAttribute ("device.color", key: "COLOR_CONTROL") {
+            	attributeState "color", action: "color control.setColor"
+            }
+            
 			tileAttribute ("device.onPercentage", key: "SECONDARY_CONTROL") {
 				attributeState "onPercentage", label:'${currentValue}% On'
                 attributeState "100", label:'All On'
@@ -54,7 +64,7 @@ metadata {
 		}
         
         standardTile("levelLabel", "levelLable", height:1, width:1, decoration: "flat", inactiveLabel: true) {
-            state "default", label:"Level", unit:"", icon: "st.illuminance.illuminance.bright"
+            state "default", label:"Level", unit:"", icon: "st.illuminance.illuminance.light"
         }
         
         controlTile("levelSliderControl", "device.level", "slider", height: 1, width: 3, inactiveLabel: false) {
@@ -69,10 +79,57 @@ metadata {
             state "default", label:' Sync ', unit:"", action: "adjustLevel", backgroundColor: "#ff9900"
             state "ok", label:'', unit:"", backgroundColor: "#00b509"
         }
+        
+        standardTile("saturationLabel", "saturationLabel", height:1, width:1, decoration: "flat", inactiveLabel: true) {
+            state "default", label:"Sat", unit:"", icon: "st.Kids.kids2"
+        }
+        
+        controlTile("saturationSliderControl", "device.saturation", "slider", height: 1, width: 3, inactiveLabel: false) {
+            state "saturation", action:"color control.setSaturation"
+        }
+        
+        valueTile("saturationValue", "device.saturation", inactiveLabel: true, height:1, width:1, decoration: "flat") {
+            state "default", label:'${currentValue}%', unit:""
+        }
+        
+        valueTile("saturationSync", "device.saturationSync", height:1, width:1) {
+            state "default", label:' Sync ', unit:"", action: "adjustSaturation", backgroundColor: "#ff9900"
+            state "ok", label:'', unit:"", backgroundColor: "#00b509"
+        }
+        
+        standardTile("hueLabel", "hueLabel", height:1, width:1, decoration: "flat", inactiveLabel: true) {
+            state "default", label:"Hue", unit:"", icon: "st.Kids.kids2"
+        }
+        
+        controlTile("hueSliderControl", "device.hue", "slider", height: 1, width: 3, inactiveLabel: false) {
+            state "hue", action:"color control.setHue"
+        }
+        
+        valueTile("hueValue", "device.hue", inactiveLabel: true, height:1, width:1, decoration: "flat") {
+            state "default", label:'${currentValue}%', unit:""
+        }
+        
+        valueTile("hueSync", "device.hueSync", height:1, width:1) {
+            state "default", label:' Sync ', unit:"", action: "adjustHue", backgroundColor: "#ff9900"
+            state "ok", label:'', unit:"", backgroundColor: "#00b509"
+        }
 	}
     
     main "switch"
-    details(["switch", "levelLabel", "levelSliderControl", "levelValue", "levelSync"])
+    details([
+    	"switch", 
+        "levelLabel", 
+        "levelSliderControl", 
+        "levelValue", 
+        "levelSync", 
+        "saturationLabel", 
+        "saturationSliderControl", 
+        "saturationValue", 
+        "saturationSync",
+        "hueLabel",
+        "hueSliderControl",
+        "hueValue",
+        "hueSync"])
 }
 
 def parse(String description) {
@@ -141,7 +198,7 @@ def syncSwitch(values) {
 }
 
 // LEVEL
-def setLevel(val){
+def setLevel(val) {
 	setLevel(val, true)
 }
 
@@ -196,12 +253,8 @@ def adjustLevel() {
     
     if (!values)
     	return
-        
-    def valueCountBy = values?.countBy { it }
-    valueCountBy = valueCountBy?.sort { a, b -> b.value <=> a.value }
-    
-    def level = getAdjustmentLevel(values)
-    
+
+    def level = getAdjustmentLevel(values)    
     setLevel(level)
 }
 
@@ -226,4 +279,116 @@ def getAdjustmentLevel(values) {
     }
     
     return level
+}
+
+// COLOR
+def setColor(value) {
+	setColor(value, true)
+}
+
+def setColor(value, triggerGroup) {
+	value.level = null
+    
+    def hex = value.hex
+    
+    if (!hex && value.hue && value.saturation)
+		hex = colorUtil.hslToHex(value.hue, value.saturation)
+        
+	sendEvent(name: "color", value: value.hex, displayed:false)
+    
+    if (triggerGroup)
+    	parent.performGroupCommand("setColor", [value])
+
+	if (value.saturation)
+		setSaturation(value.saturation, triggerGroup, false)
+        
+    if (value.hue)
+    	setHue(value.hue, triggerGroup, false)
+}
+
+def syncColor(values) {
+	log.debug "syncColor(): $values"
+}
+
+// SATURATION
+def setSaturation(value) {
+	setSaturation(value, true, true)
+}
+
+def setSaturation(value, triggerGroup, sendColor) {
+	on(triggerGroup)
+
+	sendEvent(name: "saturation", value: (int)value, displayed:false)
+    
+    if (triggerGroup)
+    	parent.performGroupCommand("setSaturation", [value])
+    
+    if (sendColor) {
+    	def hex = colorUtil.hslToHex((int)device.currentValue("hue"), value)
+    	sendEvent(name: "color", value: hex, displayed:false)	
+    }
+}
+
+def syncSaturation(values) {
+	log.debug "syncSaturation(): $values"
+    
+    def valueCount = values?.size()
+    def valueCountBy = values?.countBy { it }
+    def matchValue = "bad"
+    
+    valueCountBy.each { value, count -> 
+    	if (count == valueCount) {
+            matchValue = "ok"
+        	return true
+        }
+    }
+    
+    sendEvent(name: "saturationSync", value: matchValue, displayed: false)
+}
+
+def adjustSaturation() {
+    def saturation = (int)device.currentValue("saturation")    
+	log.debug "adjustSaturation $saturation"
+    setSaturation(saturation)
+}
+
+// HUE
+def setHue(value) {
+	setHue(value, true, true)
+}
+
+def setHue(value, triggerGroup, sendColor) {
+	on(triggerGroup)
+	sendEvent(name: "hue", value: (int)value, displayed: false)
+    
+    if (triggerGroup)
+    	parent.performGroupCommand("setHue", [value])
+    
+    if (sendColor) {
+    	def hex = colorUtil.hslToHex(value, (int)device.currentValue("saturation"))
+    	sendEvent(name: "color", value: hex, displayed:false)	
+    }
+}
+
+def syncHue(values) {
+	log.debug "syncHue(): $values"
+    
+    def valueCount = values?.size()
+    def valueCountBy = values?.countBy { it }
+    def matchValue = "bad"
+    
+    valueCountBy.each { value, count -> 
+    	if (count == valueCount) {
+            matchValue = "ok"
+        	return true
+        }
+    }
+    
+    sendEvent(name: "hueSync", value: matchValue, displayed: false)
+}
+
+def adjustHue() {
+    def hue = (int)device.currentValue("hue")    
+	log.debug "adjustHue: $hue"
+    setHue(hue)
 }
