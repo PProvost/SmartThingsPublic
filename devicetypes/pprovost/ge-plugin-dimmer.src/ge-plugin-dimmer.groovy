@@ -12,7 +12,7 @@
  *
  */
 metadata {
-	definition (name: "GE Plug-in Dimmer", namespace: "PProvost", author: "PProvost", ocfDeviceType: "oic.d.light") {
+	definition (name: "GE Plugin Dimmer", namespace: "pprovost", author: "pprovost", ocfDeviceType: "oic.d.light") {
 		capability "Switch Level"
 		capability "Actuator"
 		capability "Indicator"
