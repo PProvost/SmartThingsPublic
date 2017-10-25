@@ -49,6 +49,7 @@ metadata {
 		input "loadSensor", "enum", title: "Load Sensing", description: "Auto turnon when load sensed", required: false, options:["on":"On", "off":"Off"], defaultValue:"on"
 	}
 
+
 	tiles(scale: 2) {
 		multiAttributeTile(name:"switch", type: "lighting", width: 6, height: 4, canChangeIcon: true){
 			tileAttribute ("device.switch", key: "PRIMARY_CONTROL") {
