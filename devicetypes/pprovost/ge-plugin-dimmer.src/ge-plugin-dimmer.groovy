@@ -46,6 +46,7 @@ metadata {
 
 	preferences {
 		input "ledIndicator", "enum", title: "LED Indicator", description: "Turn LED indicator... ", required: false, options:["on": "When On", "off": "When Off", "never": "Never"], defaultValue: "off"
+		input "loadSensor", "enum", title: "Load Sensing", description: "Auto turnon when load sensed", required: false, options:["on":"On", "off":"Off"], defaultValue:"on"
 	}
 
 	tiles(scale: 2) {
@@ -105,7 +106,12 @@ def updated(){
             indicatorWhenOn()
             break
     }
-	loadSensingOn()
+	switch(loadSensing) {
+		case "on":
+			loadSensingOn()
+			break
+		case "off":
+			loadSensingOff()
 }
 
 def getCommandClassVersions() {
@@ -264,6 +270,11 @@ def refresh() {
 void loadSensingOn() {
 	sendEvent(name: "loadSensing", value: "on", displayed: false)
 	sendHubCommand(new physicalgraph.device.HubAction(zwave.configurationV1.configurationSet(configurationValue: [1], parameterNumber: 29, size: 1).format()))
+}
+
+void loadSensingOff() {
+	sendEvent(name: "loadSensing", value: "off", displayed: false)
+	sendHubCommand(new physicalgraph.device.HubAction(zwave.configurationV1.configurationSet(configurationValue: [0], parameterNumber: 29, size: 1).format()))
 }
 
 void indicatorWhenOn() {
